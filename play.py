@@ -5,6 +5,7 @@ import torch
 from train import Net
 import chess.svg
 import time
+import base64
 
 class Valuator(object):
     def __init__(self):
@@ -36,22 +37,25 @@ app = Flask(__name__)
 
 @app.route("/")
 def hello():
+    board_svg = base64.b64encode(chess.svg.board(board = s.board).encode('utf-8')).decode('utf-8')
     ret =  '<html>'
     ret += '<head><script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>'
     ret += '<style>input {font-size:30px;} button {font-size:30px;}</style>'
     ret += '</head><body>'
-    ret += '<img width=500 height=500 src="/board.svg?%f"></img><br/>' % time.time()
+    ret += '<img width=500 height=500 src="data:image/svg+xml;base64,%s"></img><br/>' % board_svg
     ret += '<form action = "/move"><input name="move" type="text"></input><input type="submit" value="Human Move"></form><br/>'
     return ret
 
-@app.route("/board.svg")
-def board():
-    return Response(chess.svg.board(board = s.board), mimetype = 'image/svg+xml')
+#@app.route("/board.svg")
+#def board():
+#    return Response(chess.svg.board(board = s.board), mimetype = 'image/svg+xml')
 
 def computer_move():
-    move = sorted(explore_leaves(s,v), key = lambda x:x[0], reverse = s.board.turn)[0]
-    print(move)
-    s.board.push(move[1])
+    move = sorted(explore_leaves(s,v), key = lambda x:x[0], reverse = s.board.turn)
+    print("top 3:")
+    for i, m in enumerate(move[0:3]):
+        print("  ", m)
+    s.board.push(move[0][1])
 
 @app.route("/move")
 def move():
