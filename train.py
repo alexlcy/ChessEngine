@@ -78,9 +78,9 @@ if __name__ == "__main__":
 	optimizer = optim.Adam(model.parameters())
 	floss = nn.MSELoss()
 
-	device = "cpu"
-	#device = "gpu"
-	#mdoel = model.cuda()
+	device = "cuda"
+        if device == 'cuda':
+            model = model.cuda()
 
 
 	model.train()
