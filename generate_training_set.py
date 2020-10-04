@@ -33,10 +33,13 @@ def get_dataset(num_samples=None):
 				Y.append(value)
 			print(f"prasing game {gn} got {len(X)} examples")
 			if num_samples is not None  and  len(X) > num_samples:
+				X = np.array(X)
+				Y = np.array(Y)
 				return X,Y
 			gn +=1
-	return X,Y
-
+		X = np.array(X)
+		Y = np.array(Y)
+		return X,Y
 
 if __name__ == "__main__":
 	X, Y = get_dataset(5000000)

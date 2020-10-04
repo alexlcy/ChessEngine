@@ -10,7 +10,7 @@ import torch.nn.functional as F
 
 class ChessValueDataset(Dataset):
 	def __init__(self):
-		data = np.load('processed/dataset_1k.npz')
+		data = np.load('processed/dataset_5M.npz')
 		self.X = data['arr_0']
 		self.Y = data['arr_1']
 		print('loaded', self.X.shape, self.Y.shape)
@@ -77,12 +77,9 @@ if __name__ == "__main__":
 	model = Net()
 	optimizer = optim.Adam(model.parameters())
 	floss = nn.MSELoss()
-
-	device = "cuda"
-        if device == 'cuda':
-            model = model.cuda()
-
-
+	device = "cpu"
+	if device == 'cuda':
+		model = model.cuda()
 	model.train()
 	for epoch in range(30):
 		all_loss = 0
@@ -92,19 +89,13 @@ if __name__ == "__main__":
 			data, target = data.to(device), target.to(device)
 			target = target.float()
 			data = data.float()
-			
-			#print(data.shape, target.shape)
 			optimizer.zero_grad()
 			output = model(data)
 			#print(output.shape)
-
 			loss = floss(output, target)
 			loss.backward()
-
 			optimizer.step()
-			
 			all_loss += loss.item()
 			num_loss += 1
-		
 		print("%d %f" % (epoch,all_loss/num_loss))
 	torch.save(model.state_dict(), "nets/value.pth")
