@@ -1,15 +1,15 @@
 #!/Users/alexlo/anaconda3/bin/python
 
 from state import State
-import torch
-from train import Net
+#import torch
+#from train import Net
 import chess.svg
 import time
 import base64
 import os
 import traceback
 
-MAXVAL =10000
+MAXVAL = 10000
 
 class Valuator(object):
     def __init__(self):
@@ -31,27 +31,48 @@ class ClassicValuator(object):
               chess.KING:0}
 
     def __init__(self):
-        pass
+        self.reset()
+        self.memo = {}
+
+    def reset(self):
+        self.count = 0
+
 
     def __call__(self, s):
-        if s.board.is_variant_win():
-            if s.turn == chess.WHITE:
-                return self.MAXVAL
+        self.count += 1
+        key = s.key()
+        if key not in self.memo:
+            self.memo[key] = self.value(s)
+        return self.memo[key]
+
+    def value(self,s):
+        b = s.board
+        if b.is_game_over():
+            if b.result == '1-0':
+                return MAXVAL
+            elif b.result == '0-1':
+                return -1 * MAXVAL
             else:
-                return -1 * self.MAXVAL
-        if s.board.is_variant_loss():
-            if s.turn == chess.WHITE:
-                return -1 * self.MAXVAL
-            else:
-                return self.MAXVAL
-        pm = s.board.piece_map()
-        val = 0
+                return 0
+
+        val = 0.0 
+        # Value function for the pieces values
+        pm = b.piece_map()
         for x in pm:
             tval = self.values[pm[x].piece_type]
             if pm[x].color == chess.WHITE:
                 val += tval
             else:
                 val -= tval
+
+        # Value function for the mobility values
+        bak = b.turn
+        b.turn = chess.WHITE
+        val += 0.1 * b.legal_moves.count()
+        b.turn = chess.BLACK
+        val -= 0.1 * b.legal_moves.count()
+        b.turn = bak
+        self.memo[s.key()] = val
         return val
 
 #v = Valuator()
@@ -67,8 +88,8 @@ app = Flask(__name__)
 
 
 
-def computer_minimax(s,v,depth=2):
-    if depth == 0 or s.board.is_game_over():
+def computer_minimax(s,v,depth,a,b, big = False):
+    if depth >= 5 or s.board.is_game_over():
         return v(s)
 
     turn = s.board.turn
@@ -78,27 +99,58 @@ def computer_minimax(s,v,depth=2):
     else:
         ret = MAXVAL
 
-    for e in s.edges():
+    if big:
+        bret = []
+   
+    isort = []
+    for e in s.board.legal_moves:
         s.board.push(e)
-        tval = computer_minimax(s,v,depth-1)
+        isort.append((v(s), e))
+        s.board.pop()
+    move = sorted(isort, key = lambda x:x[0], reverse = s.board.turn)
+    
+    # beam search beyond depth 3
+    if depth >= 3:
+        move = move[:10]
+
+    for e in [x[1] for x in move]:
+        s.board.push(e)
+        tval = computer_minimax(s,v,depth+1,a,b)
+        s.board.pop()
+
+        if big:
+            bret.append((tval, e))
+
         if turn == chess.WHITE:
             ret = max(ret, tval)
+            a = max(a,ret)
+            if a >=b:
+                break  # b cut off
         else:
             ret = min(ret, tval)
-        s.board.pop()
-    return ret
+            b = min(b,ret)
+            if a >= b:
+                break  # a cut off
+    if big:
+        return ret, bret
+    else:
+        return ret
 
+    return ret
+ 
 def explore_leaves(s,v):
     ret = []
-    for e in s.edges():
-        s.board.push(e)
-        #ret.append((v(s), e))
-        ret.append((computer_minimax(s,v),e))
-        s.board.pop()
+    v.reset()
+    start = time.time()
+    cval, ret = computer_minimax(s,v,depth=0,a=-MAXVAL,b=MAXVAL,big=True)
+    eta = time.time() - start
+    print("Explored %d nodes in %.3f seconds %d/sec" % (v.count, eta, v.count/eta))
     return ret
 
 def computer_move(s,v):
     move = sorted(explore_leaves(s,v), key = lambda x:x[0], reverse = s.board.turn)
+    if len(move) == 0:
+        return
     print("top 3:")
     for i, m in enumerate(move[0:3]):
         print("  ", m)

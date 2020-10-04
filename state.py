@@ -2,8 +2,8 @@
 
 import chess
 import numpy as np
-import torch
-from train import Net
+#import torch
+#from train import Net
 
 class State(object):
 	def __init__(self, board=None):
@@ -11,7 +11,10 @@ class State(object):
 			self.board = chess.Board() 
 		else:
 			self.board = board
-	
+
+	def key(self):
+		return (self.board.board_fen(), self.board.turn, self.board.castling_rights,self.board.ep_square)
+
 	def serialize(self):
 		assert self.board.is_valid()
 
