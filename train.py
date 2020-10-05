@@ -81,7 +81,7 @@ if __name__ == "__main__":
 	if device == 'cuda':
 		model = model.cuda()
 	model.train()
-	for epoch in range(30):
+	for epoch in range(10):
 		all_loss = 0
 		num_loss = 0
 		for batch_idx, (data, target) in enumerate(train_loader):
